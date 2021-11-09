@@ -3,9 +3,28 @@
 
 BEGIN;
 
-SELECT plan(8);
+SELECT plan(9);
 
 SET search_path TO public, _rrule;
+
+SELECT results_eq(
+  $$ SELECT * from occurrences(
+    'DTSTART:1997-09-01T09:00:00
+	 DTEND:1997-09-05T09:00:00
+	 RRULE:FREQ=DAILY;COUNT=5
+	 RDATE:1997-09-03T10:00:00,1997-09-03T12:00:00
+	 EXDATE:1997-09-03T09:00:00'::TEXT::RRULESET
+  ) $$,
+  $$ VALUES
+    ('1997-09-01T09:00:00'::TIMESTAMP),
+	('1997-09-02T09:00:00'),
+	('1997-09-03T10:00:00'),
+	('1997-09-03T12:00:00'),
+	('1997-09-04T09:00:00'),
+	('1997-09-05T09:00:00')
+  $$,
+  'testExRule'
+);
 
 SELECT results_eq(
   $$ SELECT * FROM occurrences(
