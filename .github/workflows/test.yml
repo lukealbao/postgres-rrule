@@ -8,7 +8,7 @@ jobs:
 
     strategy:
       matrix:
-        pg-version: [12]
+        pg-version: [10, 11, 12]
 
     services:
       postgres:
@@ -22,25 +22,25 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-    - name: Compile
+    - name: Compile Source
       run: make compile
-    - name: Execute
+    - name: Load Source
       run: make execute
       env:
         PGHOST: postgres
         PGPASSWORD: unsafe
         PGUSER: postgres
-    - name: install pg_prove
+    - name: Setup pg_prove on runner
       run: sudo cpan TAP::Parser::SourceHandler::pgTAP
       env:
         SHELL: /bin/bash
-    - name: Checkout pgtap
+    - name: Setup pgtap on target
       uses: actions/checkout@v2
       with:
         repository: theory/pgtap
         path: pgtap
         ref: v1.1.0
-    - name: install pgtap
+    - name: Install pgtap on target
       working-directory: pgtap
       run: make && psql --host localhost --username postgres --dbname postgres --file sql/pgtap.sql
       env:
