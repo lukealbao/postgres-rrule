@@ -1,0 +1,55 @@
+name: Unit Tests
+
+on: push
+
+jobs:
+  test-pg-version:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        pg-version: [12]
+
+    services:
+      postgres:
+        image: postgres:${{ matrix.pg-version }}
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: unsafe
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Compile
+      run: make compile
+    - name: Execute
+      run: make execute
+      env:
+        PGHOST: postgres
+        PGPASSWORD: unsafe
+        PGUSER: postgres
+    - name: install pg_prove
+      run: sudo cpan TAP::Parser::SourceHandler::pgTAP
+      env:
+        SHELL: /bin/bash
+    - name: install postgres dev
+      run: sudo apt-get install -y --no-install-recommends postgresql-server-dev-all
+    - name: Checkout pgtap
+      uses: actions/checkout@v2
+      with:
+        repository: theory/pgtap
+        path: pgtap
+        ref: v1.1.0
+    - name: install pgtap
+      working-directory: pgtap
+      run: make && psql --host localhost --username postgres --dbname postgres --file sql/pgtap.sql
+      env:
+        PGPASSWORD: unsafe
+    - name: Run tests
+      run: make test
+      env:
+        PGHOST: postgres
+        PGPASSWORD: unsafe
+        PGUSER: postgres

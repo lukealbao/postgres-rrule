@@ -57,7 +57,9 @@ CREATE TYPE _rrule.exploded_interval AS (
   "months" INTEGER,
   "days" INTEGER,
   "seconds" INTEGER
-);CREATE OR REPLACE FUNCTION _rrule.explode_interval(INTERVAL)
+);
+
+CREATE OR REPLACE FUNCTION _rrule.explode_interval(INTERVAL)
 RETURNS _rrule.EXPLODED_INTERVAL AS $$
   SELECT
     (
@@ -105,7 +107,9 @@ RETURNS BOOLEAN AS $$
     COALESCE(months = seconds, TRUE)
   FROM factors;
 
-$$ LANGUAGE SQL IMMUTABLE STRICT;CREATE OR REPLACE FUNCTION _rrule.parse_line (input TEXT, marker TEXT)
+$$ LANGUAGE SQL IMMUTABLE STRICT;
+
+CREATE OR REPLACE FUNCTION _rrule.parse_line (input TEXT, marker TEXT)
 RETURNS SETOF TEXT AS $$
   -- Clear spaces at the front of the lines
   WITH A4 as (SELECT regexp_replace(input, '^\s*',  '', 'ng') "r"),
@@ -124,6 +128,7 @@ RETURNS SETOF TEXT AS $$
   FROM A20
   WHERE "r" != '';
 $$ LANGUAGE SQL IMMUTABLE STRICT;
+
 CREATE OR REPLACE FUNCTION _rrule.timestamp_to_day("ts" TIMESTAMP) RETURNS _rrule.DAY AS $$
   SELECT CAST(CASE to_char("ts", 'DY')
     WHEN 'MON' THEN 'MO'
@@ -138,7 +143,9 @@ $$ LANGUAGE SQL IMMUTABLE;
 
 CREATE CAST (TIMESTAMP AS _rrule.DAY)
   WITH FUNCTION _rrule.timestamp_to_day(TIMESTAMP)
-  AS IMPLICIT;CREATE OR REPLACE FUNCTION _rrule.enum_index_of(anyenum)
+  AS IMPLICIT;
+
+CREATE OR REPLACE FUNCTION _rrule.enum_index_of(anyenum)
 RETURNS INTEGER AS $$
     SELECT row_number FROM (
         SELECT (row_number() OVER ())::INTEGER, "value"
@@ -147,12 +154,12 @@ RETURNS INTEGER AS $$
     WHERE "value" = $1;
 $$ LANGUAGE SQL IMMUTABLE STRICT;
 COMMENT ON FUNCTION _rrule.enum_index_of(anyenum) IS 'Given an ENUM value, return it''s index.';
+
 CREATE OR REPLACE FUNCTION _rrule.integer_array (TEXT)
 RETURNS integer[] AS $$
   SELECT ('{' || $1 || '}')::integer[];
 $$ LANGUAGE SQL IMMUTABLE STRICT;
 COMMENT ON FUNCTION _rrule.integer_array (text) IS 'Coerce a text string into an array of integers';
-
 
 
 CREATE OR REPLACE FUNCTION _rrule.day_array (TEXT)
@@ -172,6 +179,8 @@ $$ LANGUAGE SQL IMMUTABLE STRICT;
 CREATE OR REPLACE FUNCTION _rrule.explode(_rrule.RRULE)
 RETURNS SETOF _rrule.RRULE AS 'SELECT $1' LANGUAGE SQL IMMUTABLE STRICT;
 COMMENT ON FUNCTION _rrule.explode (_rrule.RRULE) IS 'Helper function to allow SELECT * FROM explode(rrule)';
+
+
 CREATE OR REPLACE FUNCTION _rrule.compare_equal(_rrule.RRULE, _rrule.RRULE)
 RETURNS BOOLEAN AS $$
   SELECT count(*) = 1 FROM (
@@ -187,6 +196,7 @@ RETURNS BOOLEAN AS $$
     SELECT * FROM _rrule.explode($1) UNION SELECT * FROM _rrule.explode($2)
   ) AS x;
 $$ LANGUAGE SQL IMMUTABLE STRICT;
+
 CREATE OR REPLACE FUNCTION _rrule.build_interval("interval" INTEGER, "freq" _rrule.FREQ)
 RETURNS INTERVAL AS $$
   -- Transform ical time interval enums into Postgres intervals, e.g.
@@ -199,6 +209,7 @@ CREATE OR REPLACE FUNCTION _rrule.build_interval(_rrule.RRULE)
 RETURNS INTERVAL AS $$
   SELECT _rrule.build_interval(COALESCE($1."interval", 1), $1."freq");
 $$ LANGUAGE SQL IMMUTABLE STRICT;
+
 -- rrule containment.
 -- intervals must be compatible.
 -- wkst must match
@@ -215,6 +226,7 @@ CREATE OR REPLACE FUNCTION _rrule.contained_by(_rrule.RRULE, _rrule.RRULE)
 RETURNS BOOLEAN AS $$
   SELECT _rrule.contains($2, $1);
 $$ LANGUAGE SQL IMMUTABLE STRICT;
+
 CREATE OR REPLACE FUNCTION _rrule.until("rrule" _rrule.RRULE, "dtstart" TIMESTAMP)
 RETURNS TIMESTAMP AS $$
   SELECT min("until")
@@ -309,6 +321,8 @@ BEGIN
 
 END;
 $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+
 CREATE OR REPLACE FUNCTION _rrule.validate_rrule (result _rrule.RRULE)
 RETURNS void AS $$
 BEGIN
@@ -350,7 +364,9 @@ BEGIN
     END IF;
   END IF;
 END;
-$$ LANGUAGE plpgsql IMMUTABLE STRICT;CREATE OR REPLACE FUNCTION _rrule.rrule (TEXT)
+$$ LANGUAGE plpgsql IMMUTABLE STRICT;
+
+CREATE OR REPLACE FUNCTION _rrule.rrule (TEXT)
 RETURNS _rrule.RRULE AS $$
 DECLARE
   result _rrule.RRULE;
@@ -425,6 +441,7 @@ RETURNS TEXT AS $$
     || CASE WHEN $1."wkst" = 'MO' THEN '' ELSE COALESCE('WKST=' || $1."wkst" || ';', '') END
   , ';$', '');
 $$ LANGUAGE SQL IMMUTABLE STRICT;
+
 CREATE OR REPLACE FUNCTION _rrule.rruleset (TEXT)
 RETURNS _rrule.RRULESET AS $$
   WITH "dtstart-line" AS (SELECT _rrule.parse_line($1::text, 'DTSTART') as "x"),
@@ -435,6 +452,7 @@ RETURNS _rrule.RRULESET AS $$
   SELECT
     (SELECT "x"::timestamp FROM "dtstart-line" LIMIT 1) AS "dtstart",
     (SELECT "x"::timestamp FROM "dtend-line" LIMIT 1) AS "dtend",
+
     (SELECT _rrule.rrule($1::text) "rrule") as "rrule",
     (SELECT _rrule.rrule("x"::text) "rrule" FROM "exrule-line") as "exrule",
     (SELECT (regexp_split_to_array("x"::text, ','))::TIMESTAMP[] from "rdate-line" AS "rdate"),
